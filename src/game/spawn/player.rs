@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::screen::Screen;
+use crate::{game::assets::PlayerAssets, screen::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.observe(spawn_player);
@@ -16,6 +16,14 @@ pub struct SpawnPlayer;
 #[reflect(Component)]
 pub struct Player;
 
-fn spawn_player(_trigger: Trigger<SpawnPlayer>, mut commands: Commands) {
-    commands.spawn((Name::new("Player"), Player, StateScoped(Screen::Playing)));
+fn spawn_player(_trigger: Trigger<SpawnPlayer>, assets: Res<PlayerAssets>, mut commands: Commands) {
+    commands.spawn((
+        Name::new("Player"),
+        Player,
+        SceneBundle {
+            scene: assets.mesh.clone_weak(),
+            ..default()
+        },
+        StateScoped(Screen::Playing),
+    ));
 }

@@ -18,7 +18,10 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct PlayerAssets {}
+pub struct PlayerAssets {
+    #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Scene0")]
+    pub mesh: Handle<Scene>,
+}
 
 #[derive(AssetCollection, Resource)]
 pub struct AudioAssets {
