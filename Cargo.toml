@@ -9,6 +9,8 @@ bevy = { version = "0.14" }
 bevy_asset_loader = "0.21"
 bevy_infinite_grid = "0.13"
 smooth-bevy-cameras = "0.12.0"
+bevy-inspector-egui = { version = "0.25", optional = true }
+
 # Disable low-severity logs at compile time for performance.
 log = { version = "0.4", features = [
     "max_level_debug",
@@ -25,6 +27,7 @@ dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
     "bevy/bevy_dev_tools",
+    "dep:bevy-inspector-egui",
 ]
 dev_native = [
     "dev",

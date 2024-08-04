@@ -21,6 +21,9 @@ pub(super) fn plugin(app: &mut App) {
 pub struct PlayerAssets {
     #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Scene0")]
     pub mesh: Handle<Scene>,
+
+    #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Animation2")]
+    pub animations: Handle<AnimationClip>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -33,17 +36,17 @@ pub struct AudioAssets {
 
     // SFX
     #[asset(path = "audio/sfx/button_hover.ogg")]
-    pub button_hover: Handle<AudioSource>, // SfxKey::ButtonHover, asset_server.load(),
+    pub button_hover: Handle<AudioSource>,
     #[asset(path = "audio/sfx/button_press.ogg")]
-    pub button_press: Handle<AudioSource>, // SfxKey::ButtonPress, asset_server.load(),
+    pub button_press: Handle<AudioSource>,
     #[asset(path = "audio/sfx/step1.ogg")]
-    pub step1: Handle<AudioSource>, // SfxKey::Step1, asset_server.load()
+    pub step1: Handle<AudioSource>,
     #[asset(path = "audio/sfx/step2.ogg")]
-    pub step2: Handle<AudioSource>, // SfxKey::Step2, asset_server.load()
+    pub step2: Handle<AudioSource>,
     #[asset(path = "audio/sfx/step3.ogg")]
-    pub step3: Handle<AudioSource>, // SfxKey::Step3, asset_server.load()
+    pub step3: Handle<AudioSource>,
     #[asset(path = "audio/sfx/step4.ogg")]
-    pub step4: Handle<AudioSource>, // SfxKey::Step4, asset_server.load()
+    pub step4: Handle<AudioSource>,
 }
 
 impl Index<SoundtrackKey> for AudioAssets {

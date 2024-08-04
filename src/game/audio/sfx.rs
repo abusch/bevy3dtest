@@ -25,6 +25,7 @@ fn play_sfx(trigger: Trigger<PlaySfx>, mut commands: Commands, audio_assets: Res
 #[derive(Event)]
 pub enum PlaySfx {
     Key(SfxKey),
+    #[allow(dead_code)]
     RandomStep,
 }
 
