@@ -74,9 +74,22 @@ enum AppSet {
     Update,
 }
 
+#[derive(Component)]
+pub struct MainCamera;
+
 fn spawn_camera(mut commands: Commands) {
+    // Camera
     commands.spawn((
-        Name::new("Camera"),
+        Name::new("3D Camera"),
+        MainCamera,
+        Camera3dBundle::default(),
+        IsDefaultUiCamera,
+    ));
+}
+
+fn spawn_2d_camera(mut commands: Commands) {
+    commands.spawn((
+        Name::new("2D Camera"),
         Camera2dBundle::default(),
         // Render all UI to this camera.
         // Not strictly necessary since we only use one camera,
