@@ -5,7 +5,10 @@ use bevy_infinite_grid::InfiniteGridBundle;
 use smooth_bevy_cameras::controllers::orbit::{OrbitCameraBundle, OrbitCameraController};
 
 use super::Screen;
-use crate::{game::spawn::level::SpawnLevel, MainCamera};
+use crate::{
+    game::{assets::SoundtrackKey, audio::soundtrack::PlaySoundtrack, spawn::level::SpawnLevel},
+    MainCamera,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Playing), enter_playing);
@@ -47,6 +50,7 @@ fn enter_playing(mut commands: Commands, main_camera: Query<Entity, With<MainCam
     // Infinite grid plane
     commands.spawn((InfiniteGridBundle::default(), StateScoped(Screen::Playing)));
 
+    commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Gameplay));
     commands.trigger(SpawnLevel);
 }
 
@@ -56,7 +60,7 @@ fn exit_playing(mut commands: Commands, main_camera: Query<Entity, With<MainCame
     commands.entity(camera).remove::<OrbitCameraBundle>();
 
     // We could use [`StateScoped`] on the sound playing entities instead.
-    // commands.trigger(PlaySoundtrack::Disable);
+    commands.trigger(PlaySoundtrack::Disable);
 }
 
 fn return_to_title_screen(mut next_screen: ResMut<NextState<Screen>>) {

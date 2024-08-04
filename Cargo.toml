@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.14" }
+bevy_asset_loader = "0.21"
 bevy_infinite_grid = "0.13"
 smooth-bevy-cameras = "0.12.0"
 # Disable low-severity logs at compile time for performance.
