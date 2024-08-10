@@ -12,19 +12,26 @@ pub(super) fn plugin(app: &mut App) {
     app.add_loading_state(
         LoadingState::new(Screen::Loading)
             .continue_to_state(Screen::Title)
-            .load_collection::<PlayerAssets>()
+            .load_collection::<CharactersAssets>()
+            // .load_collection::<PlayerAssets>()
             .load_collection::<AudioAssets>(),
     );
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct PlayerAssets {
-    #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Scene0")]
-    pub mesh: Handle<Scene>,
-
-    #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Animation2")]
-    pub animations: Handle<AnimationClip>,
+pub struct CharactersAssets {
+    #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb")]
+    pub male_a: Handle<Gltf>,
 }
+
+// #[derive(AssetCollection, Resource)]
+// pub struct PlayerAssets {
+//     #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Scene0")]
+//     pub mesh: Handle<Scene>,
+//
+//     #[asset(path = "kenney-characters/Models/GLB format/character-male-a.glb#Animation2")]
+//     pub animations: Handle<AnimationClip>,
+// }
 
 #[derive(AssetCollection, Resource)]
 pub struct AudioAssets {

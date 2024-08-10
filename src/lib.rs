@@ -4,11 +4,14 @@ mod game;
 mod screen;
 mod ui;
 
+use avian3d::PhysicsPlugins;
 use bevy::{
     asset::AssetMetaCheck,
     audio::{AudioPlugin, Volume},
     prelude::*,
 };
+use bevy_tnua::prelude::TnuaControllerPlugin;
+use bevy_tnua_avian3d::TnuaAvian3dPlugin;
 
 pub struct AppPlugin;
 
@@ -24,7 +27,7 @@ impl Plugin for AppPlugin {
         app.add_systems(Startup, spawn_camera);
 
         // Add Bevy plugins.
-        app.add_plugins(
+        app.add_plugins((
             DefaultPlugins
                 .set(AssetPlugin {
                     // Wasm builds will check for meta files (that don't exist) if this isn't set.
@@ -50,7 +53,10 @@ impl Plugin for AppPlugin {
                     },
                     ..default()
                 }),
-        );
+            PhysicsPlugins::default(),
+            TnuaControllerPlugin::default(),
+            TnuaAvian3dPlugin::default(),
+        ));
 
         // Add other plugins.
         app.add_plugins((game::plugin, screen::plugin, ui::plugin));
