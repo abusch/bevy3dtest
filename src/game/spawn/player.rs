@@ -1,19 +1,17 @@
 //! Spawn the player.
 
-use std::{
-    collections::HashMap,
-    f32::consts::{FRAC_PI_2, PI},
-};
+use std::collections::HashMap;
 
-use avian3d::prelude::{Collider, LockedAxes, RigidBody};
+use avian3d::prelude::{Collider, DebugRender, LockedAxes, RigidBody};
 use bevy::{ecs::system::SystemState, prelude::*};
 use bevy_asset_loader::loading_state::{
     config::{ConfigureLoadingState, LoadingStateConfig},
     LoadingStateAppExt,
 };
 use bevy_tnua::{
-    prelude::{TnuaBuiltinWalk, TnuaController, TnuaControllerBundle},
-    TnuaAnimatingState, TnuaAnimatingStateDirective, TnuaUserControlsSystemSet,
+    builtins::TnuaBuiltinJumpState,
+    prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle},
+    TnuaAction, TnuaAnimatingState, TnuaAnimatingStateDirective, TnuaUserControlsSystemSet,
 };
 use bevy_tnua_avian3d::TnuaAvian3dSensorShape;
 
@@ -33,8 +31,12 @@ pub(super) fn plugin(app: &mut App) {
         )
             .run_if(in_state(Screen::Playing)),
     )
+    .register_type::<FloatHeight>()
     .register_type::<Player>();
 }
+
+#[derive(Component, Reflect)]
+pub struct FloatHeight(f32);
 
 #[derive(Event, Debug)]
 pub struct SpawnPlayer;
@@ -96,22 +98,30 @@ fn spawn_player(
 ) {
     info!("Spawning player");
 
-    commands.spawn((
-        Name::new("Player"),
-        Player,
-        SceneBundle {
-            scene: player_assets.scene.clone(),
-            transform: Transform::from_xyz(0.0, 2.0, 0.0).with_rotation(Quat::from_rotation_y(PI)),
-            ..default()
-        },
-        StateScoped(Screen::Playing),
-        TnuaAnimatingState::<PlayerAnimationState>::default(),
-        RigidBody::Dynamic,
-        Collider::capsule(0.5, 0.5),
-        TnuaControllerBundle::default(),
-        TnuaAvian3dSensorShape(Collider::cylinder(0.49, 0.0)),
-        LockedAxes::ROTATION_LOCKED.unlock_rotation_y(),
-    ));
+    commands
+        .spawn((
+            Name::new("Player"),
+            Player,
+            SpatialBundle::from_transform(Transform::from_xyz(0.0, 2.5, 0.0)),
+            StateScoped(Screen::Playing),
+            TnuaAnimatingState::<PlayerAnimationState>::default(),
+            RigidBody::Dynamic,
+            TnuaControllerBundle::default(),
+            TnuaAvian3dSensorShape(Collider::cylinder(0.24, 0.0)),
+            LockedAxes::ROTATION_LOCKED.unlock_rotation_y(),
+            FloatHeight(0.5),
+            Collider::capsule(0.25, 0.1),
+            DebugRender::all(),
+        ))
+        .with_children(|children| {
+            // Spawn the actual mesh as a child to be able to align it properly with the collider,
+            // which is always spawned around the origin.
+            children.spawn(SceneBundle {
+                scene: player_assets.scene.clone(),
+                transform: Transform::from_xyz(0.0, -0.5, 0.0),
+                ..default()
+            });
+        });
 }
 
 fn handle_animations(
@@ -130,7 +140,25 @@ fn handle_animations(
     };
 
     let current_status_for_animating = match controller.action_name() {
-        Some(_) => unimplemented!(),
+        Some(TnuaBuiltinJump::NAME) => {
+            // In case of jump, we want to cast it so that we can get the concrete jump state.
+            let (_, jump_state) = controller
+                .concrete_action::<TnuaBuiltinJump>()
+                .expect("action name mismatch");
+            // Depending on the state of the jump, we need to decide if we want to play the jump
+            // animation or the fall animation.
+            match jump_state {
+                TnuaBuiltinJumpState::NoJump => return,
+                TnuaBuiltinJumpState::StartingJump { .. } => PlayerAnimationState::Jumping,
+                TnuaBuiltinJumpState::SlowDownTooFastSlopeJump { .. } => {
+                    PlayerAnimationState::Jumping
+                }
+                TnuaBuiltinJumpState::MaintainingJump => PlayerAnimationState::Jumping,
+                TnuaBuiltinJumpState::StoppedMaintainingJump => PlayerAnimationState::Jumping,
+                TnuaBuiltinJumpState::FallSection => PlayerAnimationState::Falling,
+            }
+        }
+        Some(_) => panic!("Unknown command!"),
         None => {
             let Some((_, basis_state)) = controller.concrete_basis::<TnuaBuiltinWalk>() else {
                 return;
@@ -183,7 +211,11 @@ fn handle_animations(
                         .set_speed(1.0)
                         .repeat();
                 }
-                _ => unimplemented!(),
+                PlayerAnimationState::Jumping => {
+                    animation_player
+                        .start(player_assets.animations["jump"])
+                        .set_speed(1.0);
+                }
             }
         }
     }
@@ -200,8 +232,11 @@ fn prepare_animations(
     }
 }
 
-fn apply_controls(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<&mut TnuaController>) {
-    let Ok(mut controller) = query.get_single_mut() else {
+fn apply_controls(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(&mut TnuaController, &FloatHeight)>,
+) {
+    let Ok((mut controller, float_height)) = query.get_single_mut() else {
         return;
     };
 
@@ -224,7 +259,18 @@ fn apply_controls(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Tnu
     controller.basis(TnuaBuiltinWalk {
         desired_velocity: direction.normalize_or_zero() * 10.0,
         desired_forward: -direction.normalize_or_zero(),
-        float_height: 0.5,
+        float_height: float_height.0,
         ..default()
     });
+
+    // Feed the jump action every frame as long as the player holds the jump button. If the player
+    // stops holding the jump button, simply stop feeding the action.
+    if keyboard.pressed(KeyCode::Space) {
+        controller.action(TnuaBuiltinJump {
+            // The height is the only mandatory field of the jump button.
+            height: 2.0,
+            // `TnuaBuiltinJump` also has customization fields with sensible defaults.
+            ..Default::default()
+        });
+    }
 }

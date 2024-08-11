@@ -24,7 +24,7 @@ fn spawn_level(
     main_camera: Query<Entity, With<MainCamera>>,
 ) {
     // Add directional light
-    let transform = Transform::from_xyz(20.0, 0.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let transform = Transform::from_xyz(20.0, 10.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y);
     commands.spawn((
         DirectionalLightBundle {
             transform,
@@ -40,7 +40,7 @@ fn spawn_level(
     ));
 
     // Setup camera controller
-    let eye = vec3(10.0, 10.0, 10.0);
+    let eye = vec3(2.0, 10.0, 8.0);
     let target = Vec3::ZERO;
     let camera = main_camera.single();
     commands.entity(camera).insert((OrbitCameraBundle::new(
