@@ -9,7 +9,7 @@ use bevy_asset_loader::loading_state::{
     LoadingStateAppExt,
 };
 use bevy_tnua::{
-    builtins::TnuaBuiltinJumpState,
+    builtins::{TnuaBuiltinCrouch, TnuaBuiltinJumpState},
     prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle},
     TnuaAction, TnuaAnimatingState, TnuaAnimatingStateDirective, TnuaUserControlsSystemSet,
 };
@@ -39,6 +39,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct PlayerParams {
     float_height: f32,
     cling_distance: f32,
+    crouch_float_offset: f32,
 }
 
 #[derive(Event, Debug)]
@@ -88,6 +89,7 @@ pub enum PlayerAnimationState {
     Running(f32),
     Jumping,
     Falling,
+    Crouch,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
@@ -115,6 +117,7 @@ fn spawn_player(
             PlayerParams {
                 float_height: 0.5,
                 cling_distance: 0.1,
+                crouch_float_offset: 0.0,
             },
             Collider::capsule(0.25, 0.1),
             DebugRender::all(),
@@ -164,6 +167,7 @@ fn handle_animations(
                 TnuaBuiltinJumpState::FallSection => PlayerAnimationState::Falling,
             }
         }
+        Some(TnuaBuiltinCrouch::NAME) => PlayerAnimationState::Crouch,
         Some(_) => panic!("Unknown command!"),
         None => {
             let Some((_, basis_state)) = controller.concrete_basis::<TnuaBuiltinWalk>() else {
@@ -223,6 +227,11 @@ fn handle_animations(
                         .start(player_assets.animations["jump"])
                         .set_speed(1.0);
                 }
+                PlayerAnimationState::Crouch => {
+                    animation_player
+                        .start(player_assets.animations["crouch"])
+                        .set_speed(1.0);
+                }
             }
         }
     }
@@ -270,6 +279,14 @@ fn apply_controls(
         cling_distance: player_params.cling_distance,
         ..default()
     });
+
+    // Dash
+    if keyboard.pressed(KeyCode::ShiftLeft) {
+        controller.action(TnuaBuiltinCrouch {
+            float_offset: player_params.crouch_float_offset,
+            ..default()
+        });
+    }
 
     // Feed the jump action every frame as long as the player holds the jump button. If the player
     // stops holding the jump button, simply stop feeding the action.
