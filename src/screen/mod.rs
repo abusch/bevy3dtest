@@ -19,6 +19,10 @@ pub(super) fn plugin(app: &mut App) {
         credits::plugin,
         playing::plugin,
     ));
+
+    // In dev mode go straight to the loading screen
+    #[cfg(feature = "dev")]
+    app.insert_state::<Screen>(Screen::Loading);
 }
 
 /// The game's main screen states.

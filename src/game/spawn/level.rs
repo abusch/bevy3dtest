@@ -1,6 +1,6 @@
 //! Spawn the main level by triggering other observers.
 
-use avian3d::prelude::{Collider, RigidBody};
+use avian3d::prelude::{Collider, ColliderConstructor, Restitution, RigidBody};
 use bevy::{color::palettes, math::vec3, prelude::*};
 use bevy_infinite_grid::InfiniteGridBundle;
 use smooth_bevy_cameras::controllers::orbit::{OrbitCameraBundle, OrbitCameraController};
@@ -66,16 +66,47 @@ fn spawn_level(
         StateScoped(Screen::Playing),
     ));
 
-    // box
+    // Platform
     commands.spawn((
-        Name::new("Box"),
+        Name::new("Platform"),
         PbrBundle {
             mesh: meshes.add(Cuboid::new(5.0, 2.0, 5.0).mesh()),
             material: materials.add(Color::from(palettes::basic::RED)),
+            transform: Transform::from_xyz(0.0, 1.0, 0.0),
             ..default()
         },
         RigidBody::Static,
-        Collider::cuboid(5.0, 2.0, 5.0),
+        ColliderConstructor::default(),
+        StateScoped(Screen::Playing),
+    ));
+
+    // Box
+    commands.spawn((
+        Name::new("Box1"),
+        PbrBundle {
+            mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0).mesh()),
+            material: materials.add(Color::from(palettes::basic::PURPLE)),
+            transform: Transform::from_xyz(0.0, 2.5, 0.0),
+            ..default()
+        },
+        RigidBody::Dynamic,
+        ColliderConstructor::default(),
+        StateScoped(Screen::Playing),
+    ));
+
+    // Ball
+    commands.spawn((
+        Name::new("Ball1"),
+        PbrBundle {
+            mesh: meshes.add(Sphere::new(0.2).mesh()),
+            material: materials.add(Color::from(palettes::basic::PURPLE)),
+            transform: Transform::from_xyz(2.0, 2.5, 2.0),
+            ..default()
+        },
+        RigidBody::Dynamic,
+        // Make it a bit bouncy
+        Restitution::new(0.7),
+        ColliderConstructor::default(),
         StateScoped(Screen::Playing),
     ));
 

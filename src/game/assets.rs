@@ -9,9 +9,14 @@ use bevy_asset_loader::{
 use crate::screen::Screen;
 
 pub(super) fn plugin(app: &mut App) {
+    #[cfg(feature = "dev")]
+    let next_state = Screen::Playing;
+    #[cfg(not(feature = "dev"))]
+    let next_state = Screen::Title;
+
     app.add_loading_state(
         LoadingState::new(Screen::Loading)
-            .continue_to_state(Screen::Title)
+            .continue_to_state(next_state)
             .load_collection::<CharactersAssets>()
             // .load_collection::<PlayerAssets>()
             .load_collection::<AudioAssets>(),

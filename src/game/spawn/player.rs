@@ -31,12 +31,15 @@ pub(super) fn plugin(app: &mut App) {
         )
             .run_if(in_state(Screen::Playing)),
     )
-    .register_type::<FloatHeight>()
+    .register_type::<PlayerParams>()
     .register_type::<Player>();
 }
 
 #[derive(Component, Reflect)]
-pub struct FloatHeight(f32);
+pub struct PlayerParams {
+    float_height: f32,
+    cling_distance: f32,
+}
 
 #[derive(Event, Debug)]
 pub struct SpawnPlayer;
@@ -102,14 +105,17 @@ fn spawn_player(
         .spawn((
             Name::new("Player"),
             Player,
-            SpatialBundle::from_transform(Transform::from_xyz(0.0, 2.5, 0.0)),
+            SpatialBundle::from_transform(Transform::from_xyz(0.0, 5.5, 0.0)),
             StateScoped(Screen::Playing),
             TnuaAnimatingState::<PlayerAnimationState>::default(),
             RigidBody::Dynamic,
             TnuaControllerBundle::default(),
             TnuaAvian3dSensorShape(Collider::cylinder(0.24, 0.0)),
             LockedAxes::ROTATION_LOCKED.unlock_rotation_y(),
-            FloatHeight(0.5),
+            PlayerParams {
+                float_height: 0.5,
+                cling_distance: 0.1,
+            },
             Collider::capsule(0.25, 0.1),
             DebugRender::all(),
         ))
@@ -194,6 +200,7 @@ fn handle_animations(
             animation_player.stop_all();
             match state {
                 PlayerAnimationState::Standing => {
+                    animation_player.start(player_assets.animations["static"]);
                     animation_player
                         .start(player_assets.animations["idle"])
                         .set_speed(1.0)
@@ -234,9 +241,9 @@ fn prepare_animations(
 
 fn apply_controls(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut TnuaController, &FloatHeight)>,
+    mut query: Query<(&mut TnuaController, &PlayerParams)>,
 ) {
-    let Ok((mut controller, float_height)) = query.get_single_mut() else {
+    let Ok((mut controller, player_params)) = query.get_single_mut() else {
         return;
     };
 
@@ -259,7 +266,8 @@ fn apply_controls(
     controller.basis(TnuaBuiltinWalk {
         desired_velocity: direction.normalize_or_zero() * 10.0,
         desired_forward: -direction.normalize_or_zero(),
-        float_height: float_height.0,
+        float_height: player_params.float_height,
+        cling_distance: player_params.cling_distance,
         ..default()
     });
 
