@@ -2,15 +2,20 @@
 
 use avian3d::prelude::{Collider, ColliderConstructor, Restitution, RigidBody};
 use bevy::{color::palettes, math::vec3, prelude::*};
-use bevy_infinite_grid::InfiniteGridBundle;
-use smooth_bevy_cameras::controllers::orbit::{OrbitCameraBundle, OrbitCameraController};
+use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
+use smooth_bevy_cameras::LookTransform;
 
-use crate::{screen::Screen, MainCamera};
+use crate::{camera::MainCamera, screen::Screen};
 
 use super::{player::SpawnPlayer, scene::SpawnScene};
 
 pub(super) fn plugin(app: &mut App) {
-    app.observe(spawn_level);
+    app.add_plugins(InfiniteGridPlugin)
+        .insert_resource(AmbientLight {
+            brightness: 100.0,
+            ..default()
+        })
+        .observe(spawn_level);
 }
 
 #[derive(Event, Debug)]
@@ -21,7 +26,7 @@ fn spawn_level(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    main_camera: Query<Entity, With<MainCamera>>,
+    mut camera: Query<(&mut LookTransform, &mut Projection), With<MainCamera>>,
 ) {
     // Add directional light
     let transform = Transform::from_xyz(20.0, 10.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y);
@@ -40,15 +45,14 @@ fn spawn_level(
     ));
 
     // Setup camera controller
-    let eye = vec3(2.0, 10.0, 8.0);
+    let eye = vec3(0.0, 5.0, 15.0);
     let target = Vec3::ZERO;
-    let camera = main_camera.single();
-    commands.entity(camera).insert((OrbitCameraBundle::new(
-        OrbitCameraController::default(),
-        eye,
-        target,
-        Vec3::Y,
-    ),));
+    let (mut cam_transform, mut cam_proj) = camera.single_mut();
+    cam_transform.eye = eye;
+    cam_transform.target = target;
+    if let Projection::Perspective(ref mut proj) = *cam_proj {
+        proj.fov = 0.5;
+    }
 
     // Infinite grid plane
     commands.spawn((InfiniteGridBundle::default(), StateScoped(Screen::Playing)));

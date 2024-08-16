@@ -14,6 +14,7 @@ use bevy_tnua::{
     TnuaAction, TnuaAnimatingState, TnuaAnimatingStateDirective, TnuaUserControlsSystemSet,
 };
 use bevy_tnua_avian3d::TnuaAvian3dSensorShape;
+use smooth_bevy_cameras::LookTransform;
 
 use crate::{game::assets::CharactersAssets, screen::Screen, AppSet};
 
@@ -28,12 +29,16 @@ pub(super) fn plugin(app: &mut App) {
             apply_controls.in_set(TnuaUserControlsSystemSet),
             prepare_animations.in_set(AppSet::Update),
             handle_animations.in_set(AppSet::Update),
+            move_camera.in_set(AppSet::Update),
         )
             .run_if(in_state(Screen::Playing)),
     )
     .register_type::<PlayerParams>()
     .register_type::<Player>();
 }
+
+#[derive(Component)]
+pub struct CameraTracked;
 
 #[derive(Component, Reflect)]
 pub struct PlayerParams {
@@ -107,6 +112,7 @@ fn spawn_player(
         .spawn((
             Name::new("Player"),
             Player,
+            CameraTracked,
             SpatialBundle::from_transform(Transform::from_xyz(0.0, 5.5, 0.0)),
             StateScoped(Screen::Playing),
             TnuaAnimatingState::<PlayerAnimationState>::default(),
@@ -200,7 +206,7 @@ fn handle_animations(
                 }
             }
         }
-        TnuaAnimatingStateDirective::Alter { old_state, state } => {
+        TnuaAnimatingStateDirective::Alter { state, .. } => {
             animation_player.stop_all();
             match state {
                 PlayerAnimationState::Standing => {
@@ -273,7 +279,7 @@ fn apply_controls(
 
     // Feed the basis
     controller.basis(TnuaBuiltinWalk {
-        desired_velocity: direction.normalize_or_zero() * 10.0,
+        desired_velocity: direction.normalize_or_zero() * 8.0,
         desired_forward: -direction.normalize_or_zero(),
         float_height: player_params.float_height,
         cling_distance: player_params.cling_distance,
@@ -298,4 +304,15 @@ fn apply_controls(
             ..Default::default()
         });
     }
+}
+
+fn move_camera(
+    mut camera: Query<&mut LookTransform>,
+    tracked: Query<&Transform, With<CameraTracked>>,
+) {
+    let mut camera = camera.single_mut();
+    let tracked = tracked.single();
+
+    camera.target = tracked.translation;
+    // camera.look_to(tracked.back(), Vec3::Y);
 }
