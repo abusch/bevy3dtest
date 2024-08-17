@@ -3,7 +3,6 @@
 use avian3d::prelude::{Collider, ColliderConstructor, Restitution, RigidBody};
 use bevy::{color::palettes, math::vec3, prelude::*};
 use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
-use smooth_bevy_cameras::LookTransform;
 
 use crate::{camera::MainCamera, screen::Screen};
 
@@ -26,7 +25,7 @@ fn spawn_level(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut camera: Query<(&mut LookTransform, &mut Projection), With<MainCamera>>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<MainCamera>>,
 ) {
     // Add directional light
     let transform = Transform::from_xyz(20.0, 10.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y);
@@ -48,8 +47,8 @@ fn spawn_level(
     let eye = vec3(0.0, 5.0, 15.0);
     let target = Vec3::ZERO;
     let (mut cam_transform, mut cam_proj) = camera.single_mut();
-    cam_transform.eye = eye;
-    cam_transform.target = target;
+    cam_transform.translation = eye;
+    cam_transform.look_at(target, Vec3::Y);
     if let Projection::Perspective(ref mut proj) = *cam_proj {
         proj.fov = 0.5;
     }

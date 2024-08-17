@@ -1,6 +1,6 @@
 //! Spawn the player.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, f32::consts::PI};
 
 use avian3d::prelude::{Collider, DebugRender, LockedAxes, RigidBody};
 use bevy::{ecs::system::SystemState, prelude::*};
@@ -8,13 +8,13 @@ use bevy_asset_loader::loading_state::{
     config::{ConfigureLoadingState, LoadingStateConfig},
     LoadingStateAppExt,
 };
+use bevy_dolly::prelude::{LookAt, Position, Rig, Rotation};
 use bevy_tnua::{
     builtins::{TnuaBuiltinCrouch, TnuaBuiltinJumpState},
     prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle},
     TnuaAction, TnuaAnimatingState, TnuaAnimatingStateDirective, TnuaUserControlsSystemSet,
 };
 use bevy_tnua_avian3d::TnuaAvian3dSensorShape;
-use smooth_bevy_cameras::LookTransform;
 
 use crate::{game::assets::CharactersAssets, screen::Screen, AppSet};
 
@@ -42,6 +42,8 @@ pub struct CameraTracked;
 
 #[derive(Component, Reflect)]
 pub struct PlayerParams {
+    speed: f32,
+    angle_delta: f32,
     float_height: f32,
     cling_distance: f32,
     crouch_float_offset: f32,
@@ -121,6 +123,8 @@ fn spawn_player(
             TnuaAvian3dSensorShape(Collider::cylinder(0.24, 0.0)),
             LockedAxes::ROTATION_LOCKED.unlock_rotation_y(),
             PlayerParams {
+                speed: 5.0,
+                angle_delta: 0.1,
                 float_height: 0.5,
                 cling_distance: 0.1,
                 crouch_float_offset: 0.0,
@@ -133,7 +137,8 @@ fn spawn_player(
             // which is always spawned around the origin.
             children.spawn(SceneBundle {
                 scene: player_assets.scene.clone(),
-                transform: Transform::from_xyz(0.0, -0.5, 0.0),
+                transform: Transform::from_xyz(0.0, -0.5, 0.0)
+                    .with_rotation(Quat::from_rotation_y(PI)),
                 ..default()
             });
         });
@@ -185,7 +190,7 @@ fn handle_animations(
             } else {
                 let speed = basis_state.running_velocity.length();
                 if 0.01 < speed {
-                    PlayerAnimationState::Running(0.1 * speed)
+                    PlayerAnimationState::Running(0.5 * speed)
                 } else {
                     PlayerAnimationState::Standing
                 }
@@ -256,31 +261,30 @@ fn prepare_animations(
 
 fn apply_controls(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut TnuaController, &PlayerParams)>,
+    mut query: Query<(&mut TnuaController, &Transform, &PlayerParams)>,
 ) {
-    let Ok((mut controller, player_params)) = query.get_single_mut() else {
+    let Ok((mut controller, transform, player_params)) = query.get_single_mut() else {
         return;
     };
 
-    let mut direction = Vec3::ZERO;
+    let mut desired_velocity = Vec3::ZERO;
+    let mut desired_forward = transform.forward().as_vec3();
 
     if keyboard.pressed(KeyCode::ArrowUp) {
-        direction -= Vec3::Z;
-    }
-    if keyboard.pressed(KeyCode::ArrowDown) {
-        direction += Vec3::Z;
+        desired_velocity = desired_forward;
+    } else if keyboard.pressed(KeyCode::ArrowDown) {
+        desired_velocity = -desired_forward;
     }
     if keyboard.pressed(KeyCode::ArrowLeft) {
-        direction -= Vec3::X;
-    }
-    if keyboard.pressed(KeyCode::ArrowRight) {
-        direction += Vec3::X;
+        desired_forward = Quat::from_rotation_y(player_params.angle_delta) * desired_forward;
+    } else if keyboard.pressed(KeyCode::ArrowRight) {
+        desired_forward = Quat::from_rotation_y(-player_params.angle_delta) * desired_forward;
     }
 
     // Feed the basis
     controller.basis(TnuaBuiltinWalk {
-        desired_velocity: direction.normalize_or_zero() * 8.0,
-        desired_forward: -direction.normalize_or_zero(),
+        desired_velocity: desired_velocity.normalize_or_zero() * player_params.speed,
+        desired_forward: desired_forward.normalize_or_zero(),
         float_height: player_params.float_height,
         cling_distance: player_params.cling_distance,
         ..default()
@@ -306,13 +310,11 @@ fn apply_controls(
     }
 }
 
-fn move_camera(
-    mut camera: Query<&mut LookTransform>,
-    tracked: Query<&Transform, With<CameraTracked>>,
-) {
-    let mut camera = camera.single_mut();
+fn move_camera(mut rig: Query<&mut Rig>, tracked: Query<&Transform, With<CameraTracked>>) {
+    let mut rig = rig.single_mut();
     let tracked = tracked.single();
 
-    camera.target = tracked.translation;
-    // camera.look_to(tracked.back(), Vec3::Y);
+    rig.driver_mut::<Position>().position = tracked.translation;
+    rig.driver_mut::<Rotation>().rotation = tracked.rotation;
+    rig.driver_mut::<LookAt>().target = tracked.translation;
 }

@@ -3,27 +3,28 @@ use bevy::{
         bloom::BloomSettings,
         dof::{DepthOfFieldMode, DepthOfFieldSettings},
     },
+    math::vec3,
     prelude::*,
     render::camera::{Exposure, PhysicalCameraParameters},
 };
+use bevy_dolly::{
+    prelude::{Arm, LookAt, Position, Rig, Rotation, Smooth},
+    system::Dolly,
+};
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
-use smooth_bevy_cameras::{LookTransform, LookTransformBundle, LookTransformPlugin, Smoother};
 
 pub(crate) fn plugin(app: &mut App) {
     // Spawn the main camera.
-    app.add_plugins((
-        LookTransformPlugin,
-        ResourceInspectorPlugin::<CameraParameters>::default(),
-    ))
-    .add_systems(Startup, spawn_camera)
-    .add_systems(Update, update_camera)
-    .register_type::<CameraParameters>()
-    .insert_resource(CameraParameters {
-        aperture_f_stops: 2.8,
-        shutter_speed_s: 0.02,
-        sensitivity_iso: 100.0,
-        sensor_height: 0.016, // for width = 35mm
-    });
+    app.add_plugins((ResourceInspectorPlugin::<CameraParameters>::default(),))
+        .add_systems(Startup, spawn_camera)
+        .add_systems(Update, (Dolly::<MainCamera>::update_active, update_camera))
+        .register_type::<CameraParameters>()
+        .insert_resource(CameraParameters {
+            aperture_f_stops: 2.8,
+            shutter_speed_s: 0.02,
+            sensitivity_iso: 100.0,
+            sensor_height: 0.016, // for width = 35mm
+        });
 }
 
 // PhysicalCameraParameters doesn't implement `Reflect` for some reason...
@@ -58,13 +59,22 @@ pub struct MainCamera;
 
 fn spawn_camera(mut commands: Commands) {
     // Camera
+    let start_pos = vec3(0.0, 1.0, 7.0);
     commands.spawn((
         Name::new("3D Camera"),
         MainCamera,
-        LookTransformBundle {
-            transform: LookTransform::default(),
-            smoother: Smoother::new(0.9),
-        },
+        Rig::builder()
+            .with(Position::new(start_pos))
+            .with(Rotation::new(Quat::IDENTITY))
+            .with(Smooth::new_position(1.25).predictive(true))
+            .with(Arm::new(Vec3::new(0.0, 1.0, 5.0)))
+            .with(Smooth::new_position(2.5))
+            .with(
+                LookAt::new(start_pos)
+                    .tracking_smoothness(1.25)
+                    .tracking_predictive(true),
+            )
+            .build(),
         Camera3dBundle {
             camera: Camera {
                 hdr: true,
