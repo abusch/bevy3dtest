@@ -11,12 +11,10 @@ use bevy_dolly::{
     prelude::{Arm, LookAt, Position, Rig, Rotation, Smooth},
     system::Dolly,
 };
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 
 pub(crate) fn plugin(app: &mut App) {
     // Spawn the main camera.
-    app.add_plugins((ResourceInspectorPlugin::<CameraParameters>::default(),))
-        .add_systems(Startup, spawn_camera)
+    app.add_systems(Startup, spawn_camera)
         .add_systems(Update, (Dolly::<MainCamera>::update_active, update_camera))
         .register_type::<CameraParameters>()
         .insert_resource(CameraParameters {
@@ -25,6 +23,10 @@ pub(crate) fn plugin(app: &mut App) {
             sensitivity_iso: 100.0,
             sensor_height: 0.016, // for width = 35mm
         });
+    #[cfg(feature = "dev")]
+    app.add_plugins((bevy_inspector_egui::quick::ResourceInspectorPlugin::<
+        CameraParameters,
+    >::default(),));
 }
 
 // PhysicalCameraParameters doesn't implement `Reflect` for some reason...

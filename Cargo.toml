@@ -30,7 +30,7 @@ dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
     "bevy/bevy_dev_tools",
-    "dep:bevy-inspector-egui",
+    "bevy-inspector-egui",
 ]
 dev_native = [
     "dev",
