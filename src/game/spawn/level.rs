@@ -1,7 +1,7 @@
 //! Spawn the main level by triggering other observers.
 
 use avian3d::prelude::{Collider, ColliderConstructor, Restitution, RigidBody};
-use bevy::{color::palettes, math::vec3, prelude::*};
+use bevy::{color::palettes, math::vec3, pbr::DirectionalLightShadowMap, prelude::*};
 use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
 
 use crate::{camera::MainCamera, screen::Screen};
@@ -10,6 +10,7 @@ use super::{player::SpawnPlayer, scene::SpawnScene};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(InfiniteGridPlugin)
+        .insert_resource(DirectionalLightShadowMap { size: 2048 })
         .insert_resource(AmbientLight {
             brightness: 100.0,
             ..default()
